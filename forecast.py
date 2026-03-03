@@ -12,22 +12,16 @@ import pandas as pd
 from src.config import DEFAULT_DATA_URL
 from src.evaluate import evaluate_models
 from src.io import load_data
-from src.models.baselines import seasonal_naive_forecast
-from src.models.holt_winters import holt_winters_forecast
+from src.models.naive_bayes import naive_bayes_forecast
 from src.models.regression import regression_forecast
-from src.models.sarima import sarima_forecast
 from src.preprocess import build_monthly_series, complete_monthly_index
 
 
 def _run_models(monthly: pd.DataFrame, models: List[str]) -> pd.DataFrame:
     forecasts = []
     for model_name in models:
-        if model_name == "naive":
-            forecast_df = seasonal_naive_forecast(monthly)
-        elif model_name == "holt":
-            forecast_df = holt_winters_forecast(monthly)
-        elif model_name == "sarima":
-            forecast_df = sarima_forecast(monthly)
+        if model_name == "naive_bayes":
+            forecast_df = naive_bayes_forecast(monthly)
         elif model_name == "regression":
             forecast_df = regression_forecast(monthly)
         else:
@@ -103,7 +97,7 @@ def main() -> None:
     parser.add_argument("--category-col", type=str, default=None)
     parser.add_argument("--count-col", type=str, default=None)
     parser.add_argument("--book-col", type=str, default=None)
-    parser.add_argument("--model", type=str, default="all", choices=["naive", "holt", "sarima", "regression", "all"])
+    parser.add_argument("--model", type=str, default="all", choices=["naive_bayes", "regression", "all"])
     parser.add_argument("--backtest-months", type=int, default=3)
     parser.add_argument("--max-rows", type=int, default=0)
     parser.add_argument("--cache-path", type=str, default=None)
@@ -143,7 +137,7 @@ def main() -> None:
         min_recent_nonzero_value=int(args.min_recent_nonzero),
     )
 
-    model_list = [args.model] if args.model != "all" else ["naive", "regression", "holt", "sarima"]
+    model_list = [args.model] if args.model != "all" else ["naive_bayes", "regression"]
 
     forecasts = _run_models(monthly, model_list)
     if forecasts.empty:
