@@ -20,3 +20,15 @@ venv/
 
 # Streamlit
 .streamlit/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Documents & Images
+*.pdf
+*.docx
+~$*.docx
+*.png
+
+# Data Files
+*.csv

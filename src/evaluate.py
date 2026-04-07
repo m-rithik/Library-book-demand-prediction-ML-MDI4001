@@ -8,8 +8,10 @@ import pandas as pd
 from statsmodels.tools.sm_exceptions import ConvergenceWarning
 
 from .models.baselines import seasonal_naive_forecast
+from .models.gradient_boost import gradient_boost_forecast
 from .models.holt_winters import holt_winters_forecast
 from .models.naive_bayes import naive_bayes_forecast
+from .models.random_forest import random_forest_forecast
 from .models.regression import regression_forecast
 from .models.sarima import sarima_forecast
 
@@ -37,6 +39,10 @@ def _forecast_for_model(model_name: str, train_df: pd.DataFrame) -> pd.DataFrame
             return sarima_forecast(train_df)
         elif model_name == "naive":
             return seasonal_naive_forecast(train_df)
+        elif model_name == "random_forest":
+            return random_forest_forecast(train_df)
+        elif model_name == "gradient_boost":
+            return gradient_boost_forecast(train_df)
     return pd.DataFrame()
 
 

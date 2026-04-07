@@ -7,16 +7,17 @@ import pandas as pd
 from sklearn.naive_bayes import GaussianNB
 
 
-FEATURE_COLS = ["month_num", "year", "lag1", "avg3", "avg6"]
+FEATURE_COLS = ["month_num", "year", "lag1", "avg3", "avg6", "lag12"]
 
 
 def _build_features(group: pd.DataFrame) -> pd.DataFrame:
     data = group.sort_values("month").copy()
     data["month_num"] = data["month"].dt.month
-    data["year"] = data["month"].dt.year
-    data["lag1"] = data["count"].shift(1)
-    data["avg3"] = data["count"].shift(1).rolling(3).mean()
-    data["avg6"] = data["count"].shift(1).rolling(6).mean()
+    data["year"]      = data["month"].dt.year
+    data["lag1"]      = data["count"].shift(1)
+    data["avg3"]      = data["count"].shift(1).rolling(3).mean()
+    data["avg6"]      = data["count"].shift(1).rolling(6).mean()
+    data["lag12"]     = data["count"].shift(12)
     return data
 
 
@@ -67,7 +68,14 @@ def naive_bayes_forecast(monthly: pd.DataFrame) -> pd.DataFrame:
         data = _build_features(group)
         frames.append(data)
     full = pd.concat(frames, ignore_index=True)
-    full = full.dropna(subset=FEATURE_COLS + ["count"])
+
+    # Drop rows that lack the core lag/rolling features (lag1, avg3, avg6).
+    # For lag12 (same-month-last-year) use mean imputation so short series
+    # still contribute training samples rather than being silently dropped.
+    core_cols = ["month_num", "year", "lag1", "avg3", "avg6"]
+    full = full.dropna(subset=core_cols + ["count"])
+    lag12_mean = full["lag12"].mean() if full["lag12"].notna().any() else 0.0
+    full["lag12"] = full["lag12"].fillna(lag12_mean)
 
     if len(full) < 20:
         # Fallback to recent average if there is not enough training data.
@@ -88,8 +96,12 @@ def naive_bayes_forecast(monthly: pd.DataFrame) -> pd.DataFrame:
         last_month = group["month"].iloc[-1]
         next_month = last_month + pd.offsets.MonthBegin(1)
 
-        features = _build_features(group).iloc[-1]
-        if features[FEATURE_COLS].isna().any():
+        features = _build_features(group).iloc[-1].copy()
+        # Impute lag12 with the global mean used during training
+        if pd.isna(features["lag12"]):
+            features["lag12"] = lag12_mean
+        core_cols_pred = ["month_num", "year", "lag1", "avg3", "avg6"]
+        if features[core_cols_pred].isna().any():
             recent_avg = group["count"].tail(3).mean()
             pred = float(recent_avg) if recent_avg > 0 else float(group["count"].iloc[-1])
         else:
